@@ -4,27 +4,36 @@ import multiprocessing
 from web3 import Web3,Account
 from xterio_functions import Xterio
 
-addCount = 0
-for i in range(1, 3):
-    account = Account.create()
+# 客户邀请码
+ciCode = "ab72e3985b6a5d495669599ff2d2460e"
+# 看一下在开始该订单前succ_private文件里有几行
+startNum = 60
+# 订单数量
+orderNum = 50
 
+addCount = 0
+while(True):
+    account = Account.create()
+    private_key = account.key.hex()
     print(account.key.hex())
     gate_private = "e0dcdb098d8c28c8dd6ab0dda0910fc5a9b1d06e274fe33a3078dce227a30ebe"
     gate = Account.from_key(gate_private)
     proxy = "45.249.106.90:5787:taqomegr:PTHY0326"
-    request_kwargs = {"proxies": {'http': f'http://taqomegr:PTHY0326@45.249.106.90:5787',
-                                  'https': f'http://taqomegr:PTHY0326@45.249.106.90:5787'}
-                      }
+    # # request_kwargs = {"proxies": {'http': f'http://taqomegr:PTHY0326@45.249.106.90:5787',
+    #                               'https': f'http://taqomegr:PTHY0326@45.249.106.90:5787'}
+    #                   }
     web3 = Web3(Web3.HTTPProvider("https://xterio.alt.technology"))
+    #print(web3.is_connected())
     tx = {
         "from": gate.address,
         "to": account.address,
-        "value": web3.to_wei(0.000001, "ether"),
+        "value": web3.to_wei(0.0000028, "ether"),
         "nonce": web3.eth.get_transaction_count(gate.address),
-        "gasPrice": web3.eth.gas_price + 300000,
+        "gasPrice": web3.eth.gas_price,
         "chainId": 112358,
     }
     tx["gas"] = int(web3.eth.estimate_gas(tx))
+    gasprice, gas = tx["gasPrice"], tx["gas"]
     signed_txn = web3.eth.account.sign_transaction(tx, gate_private)
     transaction_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction).hex()
 
@@ -33,17 +42,52 @@ for i in range(1, 3):
     if receipt.status != 1:
         print(f"| Transaction {transaction_hash} failed!")
     print(f"| BNB transfer hash: {transaction_hash}")
-    xterio = Xterio(account.key.hex(), "ece4e9090d07f755770b35e5ffe1e570")
-
-    count = xterio.invite()
-    if count is not None:
+    xterio = Xterio(account.key.hex(), ciCode)
+    xterio.signin()
+    # 复写claimEgg函数
+    print(f"| Starting Claim Egg...")
+    try:
+        account = Account.from_key(private_key)
+        tx = {
+            "from": account.address,
+            "to": web3.to_checksum_address("0xBeEDBF1d1908174b4Fc4157aCb128dA4FFa80942"),
+            "value": 0,
+            "nonce": web3.eth.get_transaction_count(account.address),
+            "gasPrice": gasprice,
+            "gas": 150000,
+            "chainId": 112358,
+            "data": "0x48f206fc"
+        }
+        # tx["gas"] = int(self.web3.eth.estimate_gas(tx))
+        signed_txn = web3.eth.account.sign_transaction(tx, private_key)
+        transaction_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction).hex()
+        print(f"| Waiting for ClaimEgg TX to complete...")
+        receipt = web3.eth.wait_for_transaction_receipt(transaction_hash)
+        if receipt.status != 1:
+            print(f"| Transaction {transaction_hash} failed!")
+            time.sleep(random.randint(2, 4))
+        print(f"| ClaimEgg hash: {transaction_hash}")
+        time.sleep(random.randint(2, 4))
+    except Exception as e:
+        print(f'[{account.address}] claimEgg 异常：{e}')
+    # count = xterio.invite()
+    count = xterio.submit_code()
+    if count != 0:
         addCount = addCount + count
+        with open("./succ_private.txt", "a+") as f:
+            f.write(account.key.hex() + "\n")
+            f.seek(0)  # 移动文件指针到开头
+            lines = f.readlines()  # 读取所有行
+            line_count = len(lines)  # 统计行数
     else:
         # 此次失败 则将其私钥记录入文本中
-        with open("./fail_private.txt", "a") as f:
+        with open("./fail_private.txt", "a+") as f:
             f.write(account.key.hex() + "\n")
-    time.sleep(random.randint(3, 5))
-    print(f"*****************************已完成{addCount}个****************************")
+    time.sleep(random.randint(2, 4))
+    
+    print(f"*****************************已完成{addCount}个****************************总共{line_count - startNum}个，还剩{orderNum - line_count + startNum}个")
+    if line_count == orderNum + startNum:
+        break
 
 # proxy = "45.249.106.90:5787:taqomegr:PTHY0326"
 # keys = []
@@ -54,6 +98,6 @@ for i in range(1, 3):
 #         keys.append(key)
 # for key in keys:
 #     xterio = Xterio(key,
-#                     "c0f667924357478f8845fbf3fad45a90", proxy)
+#                    "f3c840a322bb72ddfb679e35010971b0", proxy)
 #     xterio.invite()
 
