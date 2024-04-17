@@ -114,6 +114,7 @@ class Xterio:
         print(f'开始邀请码填写---{self.account.address}----{self.code}')
         try:
             url = f'https://api.xter.io/palio/v1/user/{self.account.address}/invite/apply'
+            time.sleep(1)
             json_data = {
                 'code': self.code
             }

@@ -4,7 +4,7 @@ import multiprocessing
 from web3 import Web3,Account
 from xterio_functions import Xterio
 
-
+gasFee = 0.00002
 web3 = Web3(Web3.HTTPProvider("https://xterio.alt.technology"))
 nonce = web3.eth.get_transaction_count("0x907d281c54667E4aae39e1FA1Ca00ADDC8529739")
 # code 代表邀请码
@@ -18,7 +18,7 @@ with (open('code_keys.txt', 'r') as file):
 for code in codes:
     addCount = 0
     for i in range(1, 9999):
-        if addCount < 10:
+        if addCount < 35:
             account = Account.create()
             private_key = account.key.hex()
             print(account.key.hex())
@@ -33,7 +33,7 @@ for code in codes:
             tx = {
                 "from": gate.address,
                 "to": account.address,
-                "value": web3.to_wei(0.000006, "ether"),
+                "value": web3.to_wei(gasFee, "ether"),
                 "nonce": nonce,
                 "gasPrice": web3.eth.gas_price,
                 "chainId": 112358,
